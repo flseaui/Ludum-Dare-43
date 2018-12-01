@@ -21,9 +21,11 @@ namespace DefaultNamespace
                 ShipManager.Instance.WaitingForCrewSelect = false;
                 GameManager.Instance.CalcCrewMemberCounts(GetComponent<CrewStats>());
                 Destroy(ShipManager.Instance.SelectCrewMenu);
+                ShipManager.Instance.CrewMovingToBreak = true;
                 GetComponent<CrewMovement>().GoToPosition(transform.position, ShipManager.Instance.MovePos, delegate
                 {
                     ShipManager.Instance.CrewMemberSelected();
+                    ShipManager.Instance.CrewMovingToBreak = false;
                     Destroy(gameObject);
                 });
             }
