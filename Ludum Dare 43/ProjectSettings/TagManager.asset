@@ -41,3 +41,9 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: ShipParts
+    uniqueID: 604492085
+    locked: 0
+  - name: CrewMembers
+    uniqueID: 3656131041
+    locked: 0
