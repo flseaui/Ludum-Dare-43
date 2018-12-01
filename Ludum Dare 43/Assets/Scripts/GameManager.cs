@@ -17,6 +17,8 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private TextMeshProUGUI _oxygenCounter;
     [SerializeField] private TextMeshProUGUI _moneyCounter;
 
+    public int Holes = 0;
+    
     private const int StartingCrewMembers = 5;
     
     /*
@@ -58,6 +60,8 @@ public class GameManager : Singleton<GameManager>
         
         if (Oxygen < 8)
             ++Oxygen;
+
+        Oxygen -= Holes;
         
         if (Day == 1) EventManager.Instance.ShipEncounter();
         

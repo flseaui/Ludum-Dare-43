@@ -157,6 +157,8 @@ public class ShipManager : Singleton<ShipManager>
             _shipPartsMap.SetTile(_gridPos, _crewWallTileHoriz);
         else
             _shipPartsMap.SetTile(_gridPos, _crewWallTileVert);
+
+        --GameManager.Instance.Holes;
         
         TileToStatMap.Add(_gridPos, new TileStats(stats.Weight));
     }
@@ -183,6 +185,8 @@ public class ShipManager : Singleton<ShipManager>
 
         if (numTilesToBreak > breakableTiles.Count)
             numTilesToBreak = breakableTiles.Count;
+        
+        GameManager.Instance.Holes += numTilesToBreak;
         
         for (var i = 0; i < numTilesToBreak; i++)
         {
