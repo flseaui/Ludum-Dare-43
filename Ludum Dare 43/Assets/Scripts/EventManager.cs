@@ -16,7 +16,7 @@ public class EventManager : Singleton<EventManager>
     {
         var shipEncounterSplash = Instantiate(_shipEncounterSplashPrefab, _canvas.transform);
        
-        ShipManager.Instance.BreakRandomPartOfType(1);
+        ShipManager.Instance.BreakRandomPartOfType(15);
         
         StartCoroutine(KillObject(shipEncounterSplash, 3f));
     }

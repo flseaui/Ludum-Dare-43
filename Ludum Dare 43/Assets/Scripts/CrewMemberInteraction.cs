@@ -24,7 +24,7 @@ namespace DefaultNamespace
                 ShipManager.Instance.CrewMovingToBreak = true;
                 GetComponent<CrewMovement>().GoToPosition(transform.position, ShipManager.Instance.MovePos, delegate
                 {
-                    ShipManager.Instance.CrewMemberSelected();
+                    ShipManager.Instance.CrewMemberSelected(GetComponent<CrewStats>());
                     ShipManager.Instance.CrewMovingToBreak = false;
                     Destroy(gameObject);
                 });

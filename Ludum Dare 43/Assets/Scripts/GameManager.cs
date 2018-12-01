@@ -59,7 +59,7 @@ public class GameManager : Singleton<GameManager>
         if (Oxygen < 8)
             ++Oxygen;
         
-        if (Day == 2) EventManager.Instance.ShipEncounter();
+        if (Day == 1) EventManager.Instance.ShipEncounter();
         
         _dayCounter.text = $"Day: {Day}";
         var o2Bars = "";

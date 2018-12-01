@@ -6,7 +6,11 @@ namespace DefaultNamespace
     {
         public bool MenuOpened;
 
+        public bool WeightPanelOpened;
+        
         public GameObject OpenedMenu;
+
+        public GameObject OpenedPanel;
 
     }
 }
