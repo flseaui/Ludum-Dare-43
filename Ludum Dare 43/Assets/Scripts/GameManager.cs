@@ -2,7 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.Jobs.LowLevel.Unsafe;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using Random = System.Random;
 
 public class GameManager : Singleton<GameManager>
 {
@@ -16,6 +20,7 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private TextMeshProUGUI _dayCounter;
     [SerializeField] private TextMeshProUGUI _oxygenCounter;
     [SerializeField] private TextMeshProUGUI _moneyCounter;
+    [SerializeField] private Slider _progressBar;
 
     public int Holes = 0;
     
@@ -24,7 +29,33 @@ public class GameManager : Singleton<GameManager>
     public readonly int MaxCrewMembers = 9;
 
     public bool InShop;
-    
+
+    public struct Shipment
+    {
+        // 0 - easy, 1 - intermediate, 2 - difficult
+        public int Difficulty;
+        public int Length;
+        public int Price;
+    }
+
+    public Shipment TargetShipment;
+
+    public int ShipmentProgress = 0;
+
+    public int NumShipEncounters;
+
+    public bool FirstShipmentSelected;
+
+    private enum GameEvent
+    {
+        Ship,
+        Shop,
+        Shipment,
+        ShipmentComplete
+    }
+
+    private Queue<GameEvent> _scheduledEvents;
+
     /*
     0 _captainPos;
     1 _gunnerPos0;
@@ -38,6 +69,8 @@ public class GameManager : Singleton<GameManager>
     */
     [SerializeField] private Transform[] _crewSpawnPositions;
 
+    // TODO: Add carrot boss fight
+    
     [SerializeField] private int _captains = 0;
     [SerializeField] private int _gunners = 0;
     [SerializeField] private int _medics = 0;
@@ -45,25 +78,39 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private int _scientists = 0;
 
     public int CrewCount => _captains + _gunners + _medics + _janitors + _scientists;
+
+    public void SetTargetShipment(Shipment shipment)
+    {
+        TargetShipment = shipment;
+        _progressBar.maxValue = shipment.Length;
+    }
+    
+    private void ScheduleGameEvent(GameEvent gameEvent)
+    {
+        _scheduledEvents.Enqueue(gameEvent);
+    }
     
     // Start is called before the first frame update
     void Start()
     {
+        _scheduledEvents = new Queue<GameEvent>();
         for (int i = 0; i < StartingCrewMembers; i++)
         {
             SpawnCrewMember();
         }
-        InvokeRepeating(nameof(DayTick), 1, 10);
+        InvokeRepeating(nameof(DayTick), 1, 7);
     }
     
     // Update is called once per frame
     void Update()
     {
-
+        _moneyCounter.text = Money.ToString() + '$';
+        _progressBar.value = ShipmentProgress;
     }
 
     private void DayTick()
     {
+        bool deathHappened = false;
         if (InShop) return;
         
         ++Day;
@@ -72,10 +119,31 @@ public class GameManager : Singleton<GameManager>
             ++Oxygen;
 
         Oxygen -= Holes;
+
+        if (Oxygen <= 0)
+        {
+            EventManager.Instance.DeathScreen();
+        }
         
-        if (Day % 2 == 0) EventManager.Instance.ShopEncounter();
+        ++ShipmentProgress;
+
+        if (Day % 10 == 0)
+        {
+            ScheduleGameEvent(GameEvent.Shop);
+        }
         
-        //if (Day == 3) EventManager.Instance.ShipEncounter();
+        if (Day == 1) ScheduleGameEvent(GameEvent.Shipment);
+
+        if (ShipmentProgress >= TargetShipment.Length && FirstShipmentSelected)
+        {
+            ScheduleGameEvent(GameEvent.ShipmentComplete);
+        }
+
+        if (Day % 4 == 0)
+        {
+            ScheduleGameEvent(GameEvent.Ship);
+        }
+        
         
         _dayCounter.text = $"Day: {Day}";
         var o2Bars = "";
@@ -86,8 +154,31 @@ public class GameManager : Singleton<GameManager>
 
         _oxygenCounter.text = $"O2: {o2Bars}";
         
+        if (_scheduledEvents.Count > 0)
+        {
+            var gameEvent = _scheduledEvents.Dequeue();
+            switch (gameEvent)
+            {
+                case GameEvent.Ship:
+                    ++NumShipEncounters;
+                    EventManager.Instance.ShipEncounter();
+                    break;
+                case GameEvent.Shop:
+                    EventManager.Instance.ShopEncounter();
+                    break;
+                case GameEvent.Shipment:
+                    EventManager.Instance.ShipmentEncounter();
+                    break;
+                case GameEvent.ShipmentComplete:
+                    Money += TargetShipment.Price;
+                    EventManager.Instance.ShipmentCompleted();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
     }
-
+    
     public struct CrewStatsStruct
     {
         public CrewStats.MemberRole Role;
@@ -165,6 +256,7 @@ public class GameManager : Singleton<GameManager>
     
     public void MoveCrewMember(GameObject crewMember)
     {
+        var random = new Random();
         switch (crewMember.GetComponent<CrewStats>().Role)
         {
             case CrewStats.MemberRole.Captain:
@@ -174,19 +266,20 @@ public class GameManager : Singleton<GameManager>
                 ++_captains;
                 break;
             case CrewStats.MemberRole.Gunner:
+                var unoccupiedGunner = new List<int>();
                 for (var i = 1; i < 5; ++i)
                 {
-                    Debug.Log(i);
                     if (!_crewSpawnPositions[i].GetComponent<PositionStatus>().Occupied)
                     {
-                        crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[i].position);
-                        _crewSpawnPositions[i].GetComponent<PositionStatus>().Occupied = true;
-                        crewMember.GetComponent<CrewStats>().ShipPosition = i;
-                        ++_gunners;
-                        break;
+                        unoccupiedGunner.Add(i);
                     }
                 }
-               
+
+                var gunnerSpot = random.Next(unoccupiedGunner.Count);
+                crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[unoccupiedGunner[gunnerSpot]].position);
+                _crewSpawnPositions[unoccupiedGunner[gunnerSpot]].GetComponent<PositionStatus>().Occupied = true;
+                crewMember.GetComponent<CrewStats>().ShipPosition = unoccupiedGunner[gunnerSpot];
+                ++_gunners;
                 break;
             case CrewStats.MemberRole.Medic:
                 crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[5].position);
@@ -195,17 +288,20 @@ public class GameManager : Singleton<GameManager>
                 ++_medics;
                 break;
             case CrewStats.MemberRole.Janitor:
+                var unoccupiedJanitor = new List<int>();
                 for (var i = 6; i < 8; ++i)
                 {
                     if (!_crewSpawnPositions[i].GetComponent<PositionStatus>().Occupied)
                     {
-                        crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[i].position);
-                        _crewSpawnPositions[i].GetComponent<PositionStatus>().Occupied = true;
-                        crewMember.GetComponent<CrewStats>().ShipPosition = i;
-                        ++_janitors;
-                        break;
+                        unoccupiedJanitor.Add(i);
                     }
                 }
+               
+                var janitorSpot = random.Next(unoccupiedJanitor.Count);
+                crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[unoccupiedJanitor[janitorSpot]].position);
+                _crewSpawnPositions[unoccupiedJanitor[janitorSpot]].GetComponent<PositionStatus>().Occupied = true;
+                crewMember.GetComponent<CrewStats>().ShipPosition = unoccupiedJanitor[janitorSpot];
+                ++_janitors;
                 break;
             case CrewStats.MemberRole.Scientist:
                 crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[8].position);

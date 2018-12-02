@@ -16,6 +16,8 @@ namespace DefaultNamespace
         
         private void OnMouseDown()
         {
+            if (GameManager.Instance.InShop) return;
+            
             if (ShipManager.Instance.WaitingForCrewSelect)
             {
                 ShipManager.Instance.WaitingForCrewSelect = false;

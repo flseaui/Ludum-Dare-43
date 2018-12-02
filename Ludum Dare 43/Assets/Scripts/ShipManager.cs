@@ -56,7 +56,8 @@ public class ShipManager : Singleton<ShipManager>
 
     private void Update()
     {
-
+        if (GameManager.Instance.InShop) return;
+        
         bool destroyTooltip = true;
 
         if (Input.GetMouseButtonDown(0) && !WaitingForCrewSelect && !CrewMovingToBreak)
