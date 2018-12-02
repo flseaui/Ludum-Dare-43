@@ -167,6 +167,8 @@ MonoBehaviour:
       m_Image: {fileID: 0}
     - m_Text: Janitor
       m_Image: {fileID: 0}
+    - m_Text: Scientist
+      m_Image: {fileID: 0}
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:

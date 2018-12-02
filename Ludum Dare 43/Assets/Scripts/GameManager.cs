@@ -19,7 +19,11 @@ public class GameManager : Singleton<GameManager>
 
     public int Holes = 0;
     
-    private const int StartingCrewMembers = 5;
+    private readonly int StartingCrewMembers = 4;
+
+    public readonly int MaxCrewMembers = 9;
+
+    public bool InShop;
     
     /*
     0 _captainPos;
@@ -37,6 +41,9 @@ public class GameManager : Singleton<GameManager>
     private int _gunners = 0;
     private int _medics = 0;
     private int _janitors = 0;
+    private int _scientists = 0;
+
+    public int CrewCount => _captains + _gunners + _medics + _janitors + _scientists;
     
     // Start is called before the first frame update
     void Start()
@@ -56,6 +63,8 @@ public class GameManager : Singleton<GameManager>
 
     private void DayTick()
     {
+        if (InShop) return;
+        
         ++Day;
         
         if (Oxygen < 8)
@@ -63,7 +72,9 @@ public class GameManager : Singleton<GameManager>
 
         Oxygen -= Holes;
         
-        if (Day == 1) EventManager.Instance.ShipEncounter();
+        if (Day == 1) EventManager.Instance.ShopEncounter();
+        
+        if (Day == 3) EventManager.Instance.ShipEncounter();
         
         _dayCounter.text = $"Day: {Day}";
         var o2Bars = "";
@@ -75,8 +86,32 @@ public class GameManager : Singleton<GameManager>
         _oxygenCounter.text = $"O2: {o2Bars}";
         
     }
+
+    public struct CrewStatsStruct
+    {
+        public CrewStats.MemberRole Role;
     
-    void SpawnCrewMember()
+        public int Piloting;
+        public int Weight;
+        public int Strength;
+        public int Intelligence;
+    }
+
+    public void SpawnCrewMember(CrewStatsStruct stats)
+    {
+        var crewMember = Instantiate(_crewMemberPrefab);
+        
+        crewMember.GetComponent<CrewStats>().RandomizeStats();
+
+        if (GetBlacklistedRoles().Contains(stats.Role))
+            crewMember.GetComponent<CrewStats>().RandomizeRole(GetBlacklistedRoles().ToArray());
+        else
+            crewMember.GetComponent<CrewStats>().SwitchRoles(stats.Role);
+        
+        MoveCrewMember(crewMember);
+    }
+    
+    public void SpawnCrewMember()
     {
         var crewMember = Instantiate(_crewMemberPrefab);
         
@@ -94,7 +129,8 @@ public class GameManager : Singleton<GameManager>
         if (_gunners > 3) blacklist.Add(CrewStats.MemberRole.Gunner);
         if (_captains > 0) blacklist.Add(CrewStats.MemberRole.Captain);
         if (_medics > 0) blacklist.Add(CrewStats.MemberRole.Medic);
-        if (_janitors > 0) blacklist.Add(CrewStats.MemberRole.Janitor);
+        if (_janitors > 1) blacklist.Add(CrewStats.MemberRole.Janitor);
+        if (_scientists > 0) blacklist.Add(CrewStats.MemberRole.Scientist);
 
         return blacklist;
     }
@@ -114,6 +150,9 @@ public class GameManager : Singleton<GameManager>
                 break;
             case CrewStats.MemberRole.Janitor:
                 --_janitors;
+                break;
+            case CrewStats.MemberRole.Scientist:
+                --_scientists;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -153,10 +192,23 @@ public class GameManager : Singleton<GameManager>
                 ++_medics;
                 break;
             case CrewStats.MemberRole.Janitor:
-                crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[6].position);
-                _crewSpawnPositions[6].GetComponent<PositionStatus>().Occupied = true;
-                crewMember.GetComponent<CrewStats>().ShipPosition = 6;
-                ++_janitors;
+                for (var i = 6; i < 8; ++i)
+                {
+                    if (!_crewSpawnPositions[i].GetComponent<PositionStatus>().Occupied)
+                    {
+                        crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[i].position);
+                        _crewSpawnPositions[i].GetComponent<PositionStatus>().Occupied = true;
+                        crewMember.GetComponent<CrewStats>().ShipPosition = i;
+                        ++_janitors;
+                        break;
+                    }
+                }
+                break;
+            case CrewStats.MemberRole.Scientist:
+                crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[8].position);
+                _crewSpawnPositions[8].GetComponent<PositionStatus>().Occupied = true;
+                crewMember.GetComponent<CrewStats>().ShipPosition = 8;
+                ++_scientists;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

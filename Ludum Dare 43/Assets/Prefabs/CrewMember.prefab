@@ -52,6 +52,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 350e2073f46f4ad41a5f75124092ec8d, type: 3}
   - {fileID: 21300000, guid: fe624300aa9911149aea177da6493c40, type: 3}
   - {fileID: 21300000, guid: 25019b1a08ed3b54589a4956254b4e32, type: 3}
+  - {fileID: 21300000, guid: bcf9c70f786760942b53c687a07b489c, type: 3}
   - {fileID: 21300000, guid: 2ed8f2c206ccc764bb5c78a3bf4ade5b, type: 3}
   ShipPosition: 0
   Role: 0

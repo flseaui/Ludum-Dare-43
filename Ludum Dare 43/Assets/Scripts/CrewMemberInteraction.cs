@@ -25,7 +25,7 @@ namespace DefaultNamespace
                 GetComponent<CrewMovement>().GoToPosition(transform.position, ShipManager.Instance.MovePos, delegate
                 {
                     ShipManager.Instance.CrewMemberSelected(GetComponent<CrewStats>());
-                    ShipManager.Instance.CrewMovingToBreak = false;
+                    ShipManager.Instance.CrewMovingToBreak = false;    
                     Destroy(gameObject);
                 });
             }
@@ -36,9 +36,7 @@ namespace DefaultNamespace
                     MenuManager.Instance.OpenedMenu.GetComponent<CrewMemberMenu>().RoleDropdown.Hide();
                     Destroy(MenuManager.Instance.OpenedMenu);
                 }
-
-                MenuManager.Instance.MenuOpened = true;
-
+                
                 var crewMenu = Instantiate(_crewMemberMenu, _canvas.transform);
 
                 // Offset position above object bbox (in world space)
@@ -59,7 +57,8 @@ namespace DefaultNamespace
                 crewMenu.GetComponent<RectTransform>().localPosition = canvasPos;
 
                 crewMenu.GetComponent<CrewMemberMenu>().GiveStats(GetComponent<CrewStats>());
-
+                
+                MenuManager.Instance.MenuOpened = true;
                 MenuManager.Instance.OpenedMenu = crewMenu;
             }
         }

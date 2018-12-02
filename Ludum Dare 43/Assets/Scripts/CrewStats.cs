@@ -18,7 +18,8 @@ public class CrewStats : MonoBehaviour
         Captain,
         Gunner,
         Medic,
-        Janitor
+        Janitor,
+        Scientist
     }
 
     public MemberRole Role;
@@ -47,7 +48,7 @@ public class CrewStats : MonoBehaviour
     {
         while (true)
         {
-            SetRole((MemberRole) Random.Range(0, 4));
+            SetRole((MemberRole) Random.Range(0, 5));
             if (blacklistedRoles == null) break;
             if (!blacklistedRoles.Contains(Role)) break;
         }
@@ -60,16 +61,18 @@ public class CrewStats : MonoBehaviour
         {
             return false;
         }
-        else
+
+        if (MenuManager.Instance.MenuOpened)
         {
-            if (MenuManager.Instance.MenuOpened)
-                Destroy(MenuManager.Instance.OpenedMenu);
-            GameManager.Instance.CalcCrewMemberCounts(this);
-            SetRole(role);
-            GameManager.Instance.MoveCrewMember(gameObject);
-            
-            return true;
+            Destroy(MenuManager.Instance.OpenedMenu);
+            MenuManager.Instance.MenuOpened = false;
         }
+
+        GameManager.Instance.CalcCrewMemberCounts(this);
+        SetRole(role);
+        GameManager.Instance.MoveCrewMember(gameObject);
+            
+        return true;
     }
     
     public void SetRole(MemberRole role)
