@@ -77,6 +77,8 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private int _janitors = 0;
     [SerializeField] private int _scientists = 0;
 
+    private List<CrewStats> _captainsStats, _gunnersStats, _medicsStats, _janitorsStats, _scientistsStats;
+    
     public int CrewCount => _captains + _gunners + _medics + _janitors + _scientists;
 
     public void SetTargetShipment(Shipment shipment)
@@ -93,6 +95,12 @@ public class GameManager : Singleton<GameManager>
     // Start is called before the first frame update
     void Start()
     {
+        _captainsStats = new List<CrewStats>();
+        _gunnersStats = new List<CrewStats>();
+        _medicsStats = new List<CrewStats>();
+        _janitorsStats = new List<CrewStats>();
+        _scientistsStats = new List<CrewStats>();
+        
         _scheduledEvents = new Queue<GameEvent>();
         for (int i = 0; i < StartingCrewMembers; i++)
         {
@@ -106,7 +114,7 @@ public class GameManager : Singleton<GameManager>
     {
         _moneyCounter.text = Money.ToString() + '$';
         _progressBar.value = ShipmentProgress;
-    }
+   }
 
     private void DayTick()
     {
@@ -177,6 +185,25 @@ public class GameManager : Singleton<GameManager>
                     throw new ArgumentOutOfRangeException();
             }
         }
+       
+        var o2Produce = 0;
+        if (_scientistsStats.Count > 0)
+        {
+            if (_scientistsStats[0].Intelligence > 5)
+                o2Produce = 1;
+            if (_scientistsStats[0].Intelligence >= 10)
+                o2Produce = 2;
+            if (_scientistsStats[0].Intelligence >= 17)
+                o2Produce = 3;
+            if (_scientistsStats[0].Intelligence >= 20)
+                o2Produce = 4;
+        }
+        
+        ShipManager.Instance.SetTileStats("oxygen_tank", new ShipManager.OxygenTileStats
+        {
+            Oxygen = o2Produce,
+            Status = _scientists > 0
+        });
     }
     
     public struct CrewStatsStruct
@@ -264,6 +291,7 @@ public class GameManager : Singleton<GameManager>
                 _crewSpawnPositions[0].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = 0;
                 ++_captains;
+                _captainsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Gunner:
                 var unoccupiedGunner = new List<int>();
@@ -280,12 +308,14 @@ public class GameManager : Singleton<GameManager>
                 _crewSpawnPositions[unoccupiedGunner[gunnerSpot]].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = unoccupiedGunner[gunnerSpot];
                 ++_gunners;
+                _gunnersStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Medic:
                 crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[5].position);
                 _crewSpawnPositions[5].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = 5;
                 ++_medics;
+                _medicsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Janitor:
                 var unoccupiedJanitor = new List<int>();
@@ -302,12 +332,14 @@ public class GameManager : Singleton<GameManager>
                 _crewSpawnPositions[unoccupiedJanitor[janitorSpot]].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = unoccupiedJanitor[janitorSpot];
                 ++_janitors;
+                _janitorsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Scientist:
                 crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[8].position);
                 _crewSpawnPositions[8].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = 8;
                 ++_scientists;
+                _scientistsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
