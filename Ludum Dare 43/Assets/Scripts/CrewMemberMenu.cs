@@ -31,7 +31,7 @@ public class CrewMemberMenu : MonoBehaviour
 
     public void RoleDropdownChanged()
     {
-        var successfulRoleSwitch = _stats.SwitchRoles((CrewStats.MemberRole) RoleDropdown.value);
+        var successfulRoleSwitch = _stats.SwitchRoles((CrewStats.MemberRole) RoleDropdown.value, false);
         if (!successfulRoleSwitch)
         {
             RoleDropdown.value = (int) _stats.Role;

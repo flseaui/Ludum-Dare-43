@@ -54,7 +54,7 @@ public class CrewStats : MonoBehaviour
         }
     }
 
-    public bool SwitchRoles(MemberRole role)
+    public bool SwitchRoles(MemberRole role, bool dontSubtract)
     {
         var blacklistedRoles = GameManager.Instance.GetBlacklistedRoles();
         if (blacklistedRoles.Contains(role))
@@ -68,7 +68,9 @@ public class CrewStats : MonoBehaviour
             MenuManager.Instance.MenuOpened = false;
         }
 
-        GameManager.Instance.CalcCrewMemberCounts(this);
+        if (!dontSubtract)
+            GameManager.Instance.CalcCrewMemberCounts(this);
+        
         SetRole(role);
         GameManager.Instance.MoveCrewMember(gameObject);
             

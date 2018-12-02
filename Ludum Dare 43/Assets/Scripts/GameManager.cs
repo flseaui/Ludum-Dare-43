@@ -34,14 +34,15 @@ public class GameManager : Singleton<GameManager>
     5 _medicPos;
     6 _janitorPosStart;
     7 _janitorPosEnd;
+    8 scientist
     */
     [SerializeField] private Transform[] _crewSpawnPositions;
 
-    private int _captains = 0;
-    private int _gunners = 0;
-    private int _medics = 0;
-    private int _janitors = 0;
-    private int _scientists = 0;
+    [SerializeField] private int _captains = 0;
+    [SerializeField] private int _gunners = 0;
+    [SerializeField] private int _medics = 0;
+    [SerializeField] private int _janitors = 0;
+    [SerializeField] private int _scientists = 0;
 
     public int CrewCount => _captains + _gunners + _medics + _janitors + _scientists;
     
@@ -72,9 +73,9 @@ public class GameManager : Singleton<GameManager>
 
         Oxygen -= Holes;
         
-        if (Day == 1) EventManager.Instance.ShopEncounter();
+        if (Day % 2 == 0) EventManager.Instance.ShopEncounter();
         
-        if (Day == 3) EventManager.Instance.ShipEncounter();
+        //if (Day == 3) EventManager.Instance.ShipEncounter();
         
         _dayCounter.text = $"Day: {Day}";
         var o2Bars = "";
@@ -104,11 +105,12 @@ public class GameManager : Singleton<GameManager>
         crewMember.GetComponent<CrewStats>().RandomizeStats();
 
         if (GetBlacklistedRoles().Contains(stats.Role))
+        {
             crewMember.GetComponent<CrewStats>().RandomizeRole(GetBlacklistedRoles().ToArray());
+            MoveCrewMember(crewMember);
+        }
         else
-            crewMember.GetComponent<CrewStats>().SwitchRoles(stats.Role);
-        
-        MoveCrewMember(crewMember);
+            crewMember.GetComponent<CrewStats>().SwitchRoles(stats.Role, true);
     }
     
     public void SpawnCrewMember()
@@ -174,6 +176,7 @@ public class GameManager : Singleton<GameManager>
             case CrewStats.MemberRole.Gunner:
                 for (var i = 1; i < 5; ++i)
                 {
+                    Debug.Log(i);
                     if (!_crewSpawnPositions[i].GetComponent<PositionStatus>().Occupied)
                     {
                         crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[i].position);
