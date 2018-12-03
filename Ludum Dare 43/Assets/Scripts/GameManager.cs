@@ -20,6 +20,7 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private TextMeshProUGUI _dayCounter;
     [SerializeField] private TextMeshProUGUI _oxygenCounter;
     [SerializeField] private TextMeshProUGUI _moneyCounter;
+    [SerializeField] private TextMeshProUGUI _speedCounter;
     [SerializeField] private Slider _progressBar;
 
     public int Holes = 0;
@@ -87,6 +88,8 @@ public class GameManager : Singleton<GameManager>
     
     public int CrewCount => _captains + _gunners + _medics + _janitors + _scientists;
 
+    private int speed;
+    
     public void SetTargetShipment(Shipment shipment)
     {
         TargetShipment = shipment;
@@ -120,115 +123,121 @@ public class GameManager : Singleton<GameManager>
     {
         _moneyCounter.text = Money.ToString() + '$';
         _progressBar.value = ShipmentProgress;
+        
+        _speedCounter.text = $"Speed: {speed}ppd";
    }
 
-    private void DayTick()
+private void DayTick()
+{
+    bool deathHappened = false;
+    if (InShop) return;
+
+    ++Day;
+
+    if (Oxygen < 8)
+        Oxygen += OxygenProduction;
+
+    Oxygen -= Holes;
+
+    if (Oxygen <= 0)
     {
-        bool deathHappened = false;
-        if (InShop) return;
+        EventManager.Instance.DeathScreen();
+    }
 
-        ++Day;
+    if (CaptainsStats.Count > 0)
+    {
+        
+        if (CaptainsStats[0].Piloting >= 20)
+            speed = 4;
+        else if (CaptainsStats[0].Piloting >= 15)
+            speed = 3;
+        else if (CaptainsStats[0].Piloting >= 10)
+            speed = 2;
+        else if (CaptainsStats[0].Piloting >= 5)
+            speed = 1;
+        else
+            speed = 0;
+    }
 
-        if (Oxygen < 8)
-            Oxygen += OxygenProduction;
+    ShipmentProgress += speed;
+    
+    if (Day % 12 == 0)
+    {
+        ScheduleGameEvent(GameEvent.Shop);
+    }
 
-        Oxygen -= Holes;
+        if (Day == 1) ScheduleGameEvent(GameEvent.Shipment);
 
-        if (Oxygen <= 0)
+        if (ShipmentProgress >= TargetShipment.Length && FirstShipmentSelected && _canScheduleShipmentNextDay)
         {
-            EventManager.Instance.DeathScreen();
+
+            ScheduleGameEvent(GameEvent.ShipmentComplete);
+            _canScheduleShipmentNextDay = false;
         }
 
-        if (CaptainsStats.Count > 0)
+        
+        if (Day == 4 || Day == NextAttack)
         {
-            if (CaptainsStats[0].Piloting >= 20)
-                ShipmentProgress += 4;
-            else if (CaptainsStats[0].Piloting >= 15)
-                ShipmentProgress += 3;
-            else if (CaptainsStats[0].Piloting >= 10)
-                ShipmentProgress += 2;
-            else if (CaptainsStats[0].Piloting >= 5)
-                ShipmentProgress += 1;
-
-            if (Day % 12 == 0)
-            {
-                ScheduleGameEvent(GameEvent.Shop);
-            }
-
-            if (Day == 1) ScheduleGameEvent(GameEvent.Shipment);
-
-            if (ShipmentProgress >= TargetShipment.Length && FirstShipmentSelected && !_canScheduleShipmentNextDay)
-            {
-
-                ScheduleGameEvent(GameEvent.ShipmentComplete);
-                _canScheduleShipmentNextDay = false;
-            }
-
-            
-            if (Day == 4 || Day == NextAttack)
-            {
-                NextAttack = Day + UnityEngine.Random.Range(3, 7);
-                ScheduleGameEvent(GameEvent.Ship);
-            }
-
-
-            _dayCounter.text = $"Day: {Day}";
-            var o2Bars = "";
-            for (var i = 0; i < Oxygen; i++)
-            {
-                o2Bars += '|';
-            }
-
-            _oxygenCounter.text = $"O2: {o2Bars}";
-
-            if (_scheduledEvents.Count > 0)
-            {
-                var gameEvent = _scheduledEvents.Dequeue();
-                switch (gameEvent)
-                {
-                    case GameEvent.Ship:
-                        ++NumShipEncounters;
-                        EventManager.Instance.ShipEncounter();
-                        break;
-                    case GameEvent.Shop:
-                        EventManager.Instance.ShopEncounter();
-                        break;
-                    case GameEvent.Shipment:
-                        EventManager.Instance.ShipmentEncounter();
-                        break;
-                    case GameEvent.ShipmentComplete:
-                        Money += TargetShipment.Price;
-                        EventManager.Instance.ShipmentCompleted();
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-
-            var o2Produce = 0;
-            if (ScientistsStats.Count > 0)
-            {
-                if (ScientistsStats[0].Intelligence > 5)
-                    o2Produce = 1;
-                if (ScientistsStats[0].Intelligence >= 10)
-                    o2Produce = 2;
-                if (ScientistsStats[0].Intelligence >= 17)
-                    o2Produce = 3;
-                if (ScientistsStats[0].Intelligence >= 20)
-                    o2Produce = 4;
-            }
-
-            OxygenProduction = o2Produce;
-
-            ShipManager.Instance.SetTileStats("oxygen_tank", new ShipManager.OxygenTileStats
-            {
-                Oxygen = o2Produce,
-                Status = _scientists > 0
-            });
-
-            if (!_canScheduleShipmentNextDay)
-                _canScheduleShipmentNextDay = true;
+            NextAttack = Day + UnityEngine.Random.Range(3, 6);
+            ScheduleGameEvent(GameEvent.Ship);
         }
+
+
+        _dayCounter.text = $"Day: {Day}";
+        var o2Bars = "";
+        for (var i = 0; i < Oxygen; i++)
+        {
+            o2Bars += '|';
+        }
+
+        _oxygenCounter.text = $"O2: {o2Bars}";
+
+        if (_scheduledEvents.Count > 0)
+        {
+            var gameEvent = _scheduledEvents.Dequeue();
+            switch (gameEvent)
+            {
+                case GameEvent.Ship:
+                    ++NumShipEncounters;
+                    EventManager.Instance.ShipEncounter();
+                    break;
+                case GameEvent.Shop:
+                    EventManager.Instance.ShopEncounter();
+                    break;
+                case GameEvent.Shipment:
+                    EventManager.Instance.ShipmentEncounter();
+                    break;
+                case GameEvent.ShipmentComplete:
+                    Money += TargetShipment.Price;
+                    EventManager.Instance.ShipmentCompleted();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        var o2Produce = 0;
+        if (ScientistsStats.Count > 0)
+        {
+            if (ScientistsStats[0].Intelligence > 5)
+                o2Produce = 1;
+            if (ScientistsStats[0].Intelligence >= 10)
+                o2Produce = 2;
+            if (ScientistsStats[0].Intelligence >= 17)
+                o2Produce = 3;
+            if (ScientistsStats[0].Intelligence >= 20)
+                o2Produce = 4;
+        }
+
+        OxygenProduction = o2Produce;
+
+        ShipManager.Instance.SetTileStats("oxygen_tank", new ShipManager.OxygenTileStats
+        {
+            Oxygen = o2Produce,
+            Status = _scientists > 0
+        });
+
+        _canScheduleShipmentNextDay = true;
     }
 
     public struct CrewStatsStruct

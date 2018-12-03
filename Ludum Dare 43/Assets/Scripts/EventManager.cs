@@ -21,14 +21,6 @@ public class EventManager : Singleton<EventManager>
     {
         _canvas = GameObject.Find("Canvas");
     }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            ShipEncounter();
-        }
-    }
     
     public void ShopEncounter()
     {
