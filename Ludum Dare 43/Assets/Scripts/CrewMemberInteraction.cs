@@ -27,7 +27,7 @@ namespace DefaultNamespace
                 GetComponent<CrewMovement>().GoToPosition(transform.position, ShipManager.Instance.MovePos, delegate
                 {
                     ShipManager.Instance.CrewMemberSelected(GetComponent<CrewStats>());
-                    ShipManager.Instance.CrewMovingToBreak = false;    
+                    ShipManager.Instance.CrewMovingToBreak = false;
                     Destroy(gameObject);
                 });
             }
@@ -55,7 +55,10 @@ namespace DefaultNamespace
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvas.GetComponent<RectTransform>(),
                     screenPoint, null, out canvasPos);
 
-                // Set
+                // dumb fix so that far right crew menu doesnt go off screen
+                if (canvasPos.x > 800)
+                    canvasPos.x = 500;
+                
                 crewMenu.GetComponent<RectTransform>().localPosition = canvasPos;
 
                 crewMenu.GetComponent<CrewMemberMenu>().GiveStats(GetComponent<CrewStats>());

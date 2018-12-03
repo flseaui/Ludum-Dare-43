@@ -7,6 +7,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using Random = System.Random;
 
 public class ShipManager : Singleton<ShipManager>
 {
@@ -213,6 +214,7 @@ public class ShipManager : Singleton<ShipManager>
     public void BreakRandomPartOfType(int numTilesToBreak)
     {
         var breakableTiles = new List<Vector3Int>();
+        var crewTiles = new List<Vector3Int>();
         for (var i = _shipPartsMap.size.x / -2; i < _shipPartsMap.size.x / 2; i++)
         {
             for (var j = _shipPartsMap.size.y / -2; j < _shipPartsMap.size.y / 2; j++)
@@ -224,6 +226,11 @@ public class ShipManager : Singleton<ShipManager>
                     {
                         breakableTiles.Add(tilePos);
                     }
+                    else if (_shipPartsMap.GetTile(tilePos).name == "crew_wall_part" ||
+                             _shipPartsMap.GetTile(tilePos).name == "crew_wall_part_1")
+                    {
+                        crewTiles.Add(tilePos);
+                    }
                 }
             }
         }
@@ -232,12 +239,26 @@ public class ShipManager : Singleton<ShipManager>
 
         if (numTilesToBreak > breakableTiles.Count)
             numTilesToBreak = breakableTiles.Count;
+
+        foreach (var tile in crewTiles)
+        {
+            var weight = ((WeightTileStats) TileToStatMap[tile]).Weight;
+            var change = UnityEngine.Random.Range(0, weight);
+            if (change > 50)
+            {
+                breakableTiles.Add(tile);
+                numTilesToBreak++;
+            }
+        }
         
         GameManager.Instance.Holes += numTilesToBreak;
         
         for (var i = 0; i < numTilesToBreak; i++)
         {
             var index = random.Next(breakableTiles.Count);
+
+            if (TileToStatMap.ContainsKey(breakableTiles[index]))
+                TileToStatMap.Remove(breakableTiles[index]);
             
             if (breakableTiles[index] == new Vector3Int(7, -1, 0) || breakableTiles[index] == new Vector3Int(7, 0, 0)
                                                                  || breakableTiles[index] == new Vector3Int(-7, -3, 0)

@@ -46,6 +46,12 @@ public class GameManager : Singleton<GameManager>
 
     public bool FirstShipmentSelected;
 
+    public int OxygenProduction;
+
+    private bool _canScheduleShipmentNextDay = true;
+
+    public int NextAttack = 5;
+    
     private enum GameEvent
     {
         Ship,
@@ -77,7 +83,7 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private int _janitors = 0;
     [SerializeField] private int _scientists = 0;
 
-    private List<CrewStats> _captainsStats, _gunnersStats, _medicsStats, _janitorsStats, _scientistsStats;
+    public List<CrewStats> CaptainsStats, GunnersStats, MedicsStats, JanitorsStats, ScientistsStats;
     
     public int CrewCount => _captains + _gunners + _medics + _janitors + _scientists;
 
@@ -95,11 +101,11 @@ public class GameManager : Singleton<GameManager>
     // Start is called before the first frame update
     void Start()
     {
-        _captainsStats = new List<CrewStats>();
-        _gunnersStats = new List<CrewStats>();
-        _medicsStats = new List<CrewStats>();
-        _janitorsStats = new List<CrewStats>();
-        _scientistsStats = new List<CrewStats>();
+        CaptainsStats = new List<CrewStats>();
+        GunnersStats = new List<CrewStats>();
+        MedicsStats = new List<CrewStats>();
+        JanitorsStats = new List<CrewStats>();
+        ScientistsStats = new List<CrewStats>();
         
         _scheduledEvents = new Queue<GameEvent>();
         for (int i = 0; i < StartingCrewMembers; i++)
@@ -120,11 +126,11 @@ public class GameManager : Singleton<GameManager>
     {
         bool deathHappened = false;
         if (InShop) return;
-        
+
         ++Day;
-        
+
         if (Oxygen < 8)
-            ++Oxygen;
+            Oxygen += OxygenProduction;
 
         Oxygen -= Holes;
 
@@ -132,80 +138,99 @@ public class GameManager : Singleton<GameManager>
         {
             EventManager.Instance.DeathScreen();
         }
-        
-        ++ShipmentProgress;
 
-        if (Day % 10 == 0)
+        if (CaptainsStats.Count > 0)
         {
-            ScheduleGameEvent(GameEvent.Shop);
-        }
-        
-        if (Day == 1) ScheduleGameEvent(GameEvent.Shipment);
+            if (CaptainsStats[0].Piloting >= 20)
+                ShipmentProgress += 4;
+            else if (CaptainsStats[0].Piloting >= 15)
+                ShipmentProgress += 3;
+            else if (CaptainsStats[0].Piloting >= 10)
+                ShipmentProgress += 2;
+            else if (CaptainsStats[0].Piloting >= 5)
+                ShipmentProgress += 1;
 
-        if (ShipmentProgress >= TargetShipment.Length && FirstShipmentSelected)
-        {
-            ScheduleGameEvent(GameEvent.ShipmentComplete);
-        }
-
-        if (Day % 4 == 0)
-        {
-            ScheduleGameEvent(GameEvent.Ship);
-        }
-        
-        
-        _dayCounter.text = $"Day: {Day}";
-        var o2Bars = "";
-        for (var i = 0; i < Oxygen; i++)
-        {
-            o2Bars += '|';
-        }
-
-        _oxygenCounter.text = $"O2: {o2Bars}";
-        
-        if (_scheduledEvents.Count > 0)
-        {
-            var gameEvent = _scheduledEvents.Dequeue();
-            switch (gameEvent)
+            if (Day % 12 == 0)
             {
-                case GameEvent.Ship:
-                    ++NumShipEncounters;
-                    EventManager.Instance.ShipEncounter();
-                    break;
-                case GameEvent.Shop:
-                    EventManager.Instance.ShopEncounter();
-                    break;
-                case GameEvent.Shipment:
-                    EventManager.Instance.ShipmentEncounter();
-                    break;
-                case GameEvent.ShipmentComplete:
-                    Money += TargetShipment.Price;
-                    EventManager.Instance.ShipmentCompleted();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                ScheduleGameEvent(GameEvent.Shop);
             }
+
+            if (Day == 1) ScheduleGameEvent(GameEvent.Shipment);
+
+            if (ShipmentProgress >= TargetShipment.Length && FirstShipmentSelected && !_canScheduleShipmentNextDay)
+            {
+
+                ScheduleGameEvent(GameEvent.ShipmentComplete);
+                _canScheduleShipmentNextDay = false;
+            }
+
+            
+            if (Day == 4 || Day == NextAttack)
+            {
+                NextAttack = Day + UnityEngine.Random.Range(3, 7);
+                ScheduleGameEvent(GameEvent.Ship);
+            }
+
+
+            _dayCounter.text = $"Day: {Day}";
+            var o2Bars = "";
+            for (var i = 0; i < Oxygen; i++)
+            {
+                o2Bars += '|';
+            }
+
+            _oxygenCounter.text = $"O2: {o2Bars}";
+
+            if (_scheduledEvents.Count > 0)
+            {
+                var gameEvent = _scheduledEvents.Dequeue();
+                switch (gameEvent)
+                {
+                    case GameEvent.Ship:
+                        ++NumShipEncounters;
+                        EventManager.Instance.ShipEncounter();
+                        break;
+                    case GameEvent.Shop:
+                        EventManager.Instance.ShopEncounter();
+                        break;
+                    case GameEvent.Shipment:
+                        EventManager.Instance.ShipmentEncounter();
+                        break;
+                    case GameEvent.ShipmentComplete:
+                        Money += TargetShipment.Price;
+                        EventManager.Instance.ShipmentCompleted();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            var o2Produce = 0;
+            if (ScientistsStats.Count > 0)
+            {
+                if (ScientistsStats[0].Intelligence > 5)
+                    o2Produce = 1;
+                if (ScientistsStats[0].Intelligence >= 10)
+                    o2Produce = 2;
+                if (ScientistsStats[0].Intelligence >= 17)
+                    o2Produce = 3;
+                if (ScientistsStats[0].Intelligence >= 20)
+                    o2Produce = 4;
+            }
+
+            OxygenProduction = o2Produce;
+
+            ShipManager.Instance.SetTileStats("oxygen_tank", new ShipManager.OxygenTileStats
+            {
+                Oxygen = o2Produce,
+                Status = _scientists > 0
+            });
+
+            if (!_canScheduleShipmentNextDay)
+                _canScheduleShipmentNextDay = true;
         }
-       
-        var o2Produce = 0;
-        if (_scientistsStats.Count > 0)
-        {
-            if (_scientistsStats[0].Intelligence > 5)
-                o2Produce = 1;
-            if (_scientistsStats[0].Intelligence >= 10)
-                o2Produce = 2;
-            if (_scientistsStats[0].Intelligence >= 17)
-                o2Produce = 3;
-            if (_scientistsStats[0].Intelligence >= 20)
-                o2Produce = 4;
-        }
-        
-        ShipManager.Instance.SetTileStats("oxygen_tank", new ShipManager.OxygenTileStats
-        {
-            Oxygen = o2Produce,
-            Status = _scientists > 0
-        });
     }
-    
+
     public struct CrewStatsStruct
     {
         public CrewStats.MemberRole Role;
@@ -261,18 +286,23 @@ public class GameManager : Singleton<GameManager>
         {
             case CrewStats.MemberRole.Captain:
                 --_captains;
+                CaptainsStats.Remove(stats);
                 break;
             case CrewStats.MemberRole.Gunner:
                 --_gunners;
+                GunnersStats.Remove(stats);
                 break;
             case CrewStats.MemberRole.Medic:
                 --_medics;
+                MedicsStats.Remove(stats);
                 break;
             case CrewStats.MemberRole.Janitor:
                 --_janitors;
+                JanitorsStats.Remove(stats);
                 break;
             case CrewStats.MemberRole.Scientist:
                 --_scientists;
+                ScientistsStats.Remove(stats);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -291,7 +321,7 @@ public class GameManager : Singleton<GameManager>
                 _crewSpawnPositions[0].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = 0;
                 ++_captains;
-                _captainsStats.Add(crewMember.GetComponent<CrewStats>());
+                CaptainsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Gunner:
                 var unoccupiedGunner = new List<int>();
@@ -308,14 +338,14 @@ public class GameManager : Singleton<GameManager>
                 _crewSpawnPositions[unoccupiedGunner[gunnerSpot]].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = unoccupiedGunner[gunnerSpot];
                 ++_gunners;
-                _gunnersStats.Add(crewMember.GetComponent<CrewStats>());
+                GunnersStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Medic:
                 crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[5].position);
                 _crewSpawnPositions[5].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = 5;
                 ++_medics;
-                _medicsStats.Add(crewMember.GetComponent<CrewStats>());
+                MedicsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Janitor:
                 var unoccupiedJanitor = new List<int>();
@@ -332,14 +362,14 @@ public class GameManager : Singleton<GameManager>
                 _crewSpawnPositions[unoccupiedJanitor[janitorSpot]].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = unoccupiedJanitor[janitorSpot];
                 ++_janitors;
-                _janitorsStats.Add(crewMember.GetComponent<CrewStats>());
+                JanitorsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             case CrewStats.MemberRole.Scientist:
                 crewMember.GetComponent<CrewMovement>().GoToPosition(crewMember.transform.position, _crewSpawnPositions[8].position);
                 _crewSpawnPositions[8].GetComponent<PositionStatus>().Occupied = true;
                 crewMember.GetComponent<CrewStats>().ShipPosition = 8;
                 ++_scientists;
-                _scientistsStats.Add(crewMember.GetComponent<CrewStats>());
+                ScientistsStats.Add(crewMember.GetComponent<CrewStats>());
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

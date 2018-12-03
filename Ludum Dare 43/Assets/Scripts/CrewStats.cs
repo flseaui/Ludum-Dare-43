@@ -31,17 +31,31 @@ public class CrewStats : MonoBehaviour
 
     public void RandomizeStats()
     {
-        Piloting = Random.Range(0, 10);
+        var pilRand = Random.Range(0, 5);
+        if (pilRand < 4)
+            Piloting = Random.Range(0, 14);
+        else
+            Piloting = Random.Range(14, 21);
         
         var weightChange = Random.Range(0, 10);
         if (weightChange == 9)
-            Weight = Random.Range(200, 300);
+            Weight = Random.Range(200, 301);
+        else if (weightChange == 8 || weightChange == 7)
+            Weight = Random.Range(165, 201);
         else
-            Weight = Random.Range(90, 200);
+            Weight = Random.Range(90, 165);
+        
+        var strRand = Random.Range(0, 5);
+        if (strRand < 3)
+            Strength = Random.Range(0, 14);
+        else
+            Strength = Random.Range(14, 21);
 
-        Strength = Random.Range(0, 20);
-
-        Intelligence = Random.Range(0, 20);
+        var intRand = Random.Range(0, 5);
+        if (intRand < 4)
+            Intelligence = Random.Range(0, 14);
+        else
+            Intelligence = Random.Range(14, 21);
     }
 
     public void RandomizeRole(MemberRole[] blacklistedRoles = null)

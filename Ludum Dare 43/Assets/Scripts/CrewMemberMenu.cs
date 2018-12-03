@@ -12,6 +12,8 @@ public class CrewMemberMenu : MonoBehaviour
     public TMP_Dropdown RoleDropdown;
     
     private CrewStats _stats;
+
+    private bool _created;
     
     public void GiveStats(CrewStats stats)
     {
@@ -23,6 +25,11 @@ public class CrewMemberMenu : MonoBehaviour
         RoleDropdown.value = (int) _stats.Role;
     }
 
+    public void Start()
+    {
+        _created = true;
+    }
+    
     public void Close()
     {
         MenuManager.Instance.MenuOpened = false;
@@ -31,6 +38,8 @@ public class CrewMemberMenu : MonoBehaviour
 
     public void RoleDropdownChanged()
     {
+        if (!_created) return;
+        
         var successfulRoleSwitch = _stats.SwitchRoles((CrewStats.MemberRole) RoleDropdown.value, false);
         if (!successfulRoleSwitch)
         {

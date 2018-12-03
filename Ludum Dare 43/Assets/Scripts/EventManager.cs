@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
 using DefaultNamespace;
+using TMPro;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using Random = System.Random;
 
 public class EventManager : Singleton<EventManager>
 {
@@ -20,6 +22,14 @@ public class EventManager : Singleton<EventManager>
         _canvas = GameObject.Find("Canvas");
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            ShipEncounter();
+        }
+    }
+    
     public void ShopEncounter()
     {
         if (MenuManager.Instance.MenuOpened)
@@ -44,6 +54,9 @@ public class EventManager : Singleton<EventManager>
     {
         GameManager.Instance.InShop = true;
         var shipmentComplete = Instantiate(_shipmentCompletePrefab, _canvas.transform);
+
+        shipmentComplete.transform.Find("MoneyText").GetComponent<TextMeshProUGUI>().text =
+            GameManager.Instance.TargetShipment.Price.ToString() + '$';
         
         StartCoroutine(KillObject(shipmentComplete, 2f, delegate
         {
@@ -62,11 +75,65 @@ public class EventManager : Singleton<EventManager>
     public void ShipEncounter()
     {
         var shipEncounterSplash = Instantiate(_shipEncounterSplashPrefab, _canvas.transform);
-       
+
+        var gunPower = 0;
+        foreach (var gunner in GameManager.Instance.GunnersStats)
+        {
+            gunPower += gunner.Strength;
+        }
+
+        int chance = 0;
+        int subtract = 0;
+        switch (gunPower)
+        {
+            case 10:
+                chance = 1;
+                subtract = 1;
+                break;
+            case 20:
+                chance = 2;
+                subtract = 1;
+                break;
+            case 30:
+                chance = 2;
+                subtract = 2;
+                
+                break;
+            case 40:
+                chance = 2;
+                subtract = 3;
+                
+                break;
+            case 50:
+                chance = 3;
+                subtract = 3;
+                break;
+            case 60:
+                chance = 3;
+                subtract = 4;
+                break;
+            case 70:
+                chance = 3;
+                subtract = 5;
+                break;
+            case 80:
+                chance = 3;
+                subtract = 10;
+                break;    
+        }
+
+        int numBreaks = Math.Min(5, GameManager.Instance.NumShipEncounters);
+        
+        var random = UnityEngine.Random.Range(0, 4);
+        if (random <= chance)
+        {
+            numBreaks -= subtract;
+        }
+        
         if (GameManager.Instance.NumShipEncounters == 0 || GameManager.Instance.NumShipEncounters == 1)
             ShipManager.Instance.BreakRandomPartOfType(2);
         else
-            ShipManager.Instance.BreakRandomPartOfType(Math.Min(5, GameManager.Instance.NumShipEncounters));
+            ShipManager.Instance.BreakRandomPartOfType(numBreaks);
         
         StartCoroutine(KillObject(shipEncounterSplash, 3f));
     }
